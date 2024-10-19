@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-^oy)clt-d$2nlyn0^@6j_ju7j#=pk7x#=+ab2$vn3&#5kcfsa3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['13.202.42.60', 'growcraftsolutionexpert.com', 'www.growcraftsolutionexpert.com']
+ALLOWED_HOSTS = ['13.202.42.60', 'growcraftsolutionexpert.com', 'www.growcraftsolutionexpert.com', '127.0.0.1']
 
 
 # Application definition
@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'removebg',
     'corsheaders',
+    "rest_framework.authtoken",
 ]
 
 MIDDLEWARE = [
@@ -128,3 +129,57 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB
+
+
+CORS_ORIGIN_ALLOW_ALL = True 
+
+
+# CORS_ALLOWED_ORIGINS = [
+#     'http://localhost:3000',
+#     'https://growcraftsolutionexpert.com/',
+# ]
+# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# CSRF_TRUSTED_ORIGINS = [
+#     'https://growcraftsolutionexpert.com/',
+# ]
+
+
+REST_FRAMEWORK = {
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
+    "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.coreapi.AutoSchema",
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework.authentication.TokenAuthentication",
+    ),
+}
+
+WW_PLATFORM_SECRET_ENV_VAR = {
+    "WWS_WW_PLATFORM_SECRET": "WWS_WW_PLATFORM_SECRET",
+}
+
+
+WW_PLATFORM_SECRET_VAR_KEY = {
+    "WWS_WW_PLATFORM_SECRET": "68b7ff87b18adb515b0686b30bca5951a9924abb",
+}
+
+
+CORS_ALLOW_HEADERS = [
+    "content-type",
+    "client-secret",
+    "client-Key",
+    "Authorization",
+    "access-control-allow-origin",
+    "access-control-allow-headers",
+    "access-control-allow-methods",
+    "content-type",
+]
+
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]

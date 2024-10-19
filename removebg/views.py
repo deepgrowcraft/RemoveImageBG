@@ -5,11 +5,14 @@ from PIL import Image, ImageFilter, ImageEnhance
 from rembg import remove, new_session
 import io
 from django.http import HttpResponse
+from .secret import require_client_secret  # Assuming the decorator is in a module named `authentication_decorators`
+
 
 # Create a session with the U2Net model, you can try different models for accuracy vs speed trade-off
 session = new_session("u2net")  # You can also use "u2net_human_seg" if you are working with human images.
 
 @api_view(['POST'])
+@require_client_secret
 def remove_background(request):
     if 'image' not in request.FILES:
         return Response({"error": "No image provided"}, status=status.HTTP_400_BAD_REQUEST)
