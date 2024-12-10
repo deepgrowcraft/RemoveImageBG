@@ -2,3 +2,6 @@ django
 djangorestframework
 rembg
 django-cors-headers
+PyMuPDF
+pdfkit
+pytesseract
