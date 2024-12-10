@@ -192,5 +192,6 @@ CORS_ALLOW_METHODS = [
 
 
 CORS_ALLOWED_ORIGINS = [
-    "https://www.rebgfy.com",  # Replace with your front-end domain
+    "https://rebgfy.com",
+    "https://pdfsmalltools.com"
 ]
