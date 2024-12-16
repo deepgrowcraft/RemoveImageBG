@@ -8,13 +8,15 @@ import pytesseract
 from django.core.files.storage import default_storage
 from django.http import FileResponse
 from PIL import Image
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+import ast
 
 
 class ConvertDocxToPdf(APIView):
@@ -316,3 +318,157 @@ class PdfOcrView(APIView):
             # Clean up the file
             if os.path.exists(pdf_file_full_path):
                 os.remove(pdf_file_full_path)
+
+
+class ExtractPdfContent(APIView):
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
+
+    def post(self, request, *args, **kwargs):
+        # Retrieve the file and extraction preferences
+        pdf_file = request.FILES.get("file", None)
+        extract_all = request.data.get("extract_all", "false").lower() == "true"
+        pages = request.data.get("pages", None)
+
+        if not pdf_file:
+            return Response({"error": "No file provided"}, status=400)
+
+        # Parse and validate `pages` only if not extracting all
+        if not extract_all:
+            try:
+                if isinstance(pages, str):
+                    # Convert string representation of list to actual list
+                    pages = ast.literal_eval(pages)
+                if not isinstance(pages, list) or not all(
+                    isinstance(page, int) for page in pages
+                ):
+                    return Response(
+                        {"error": "`pages` must be a list of integers."}, status=400
+                    )
+                pages = [page - 1 for page in pages]  # Convert to 0-based indexing
+            except Exception:
+                return Response(
+                    {
+                        "error": "Invalid `pages` format. Provide a valid list of integers."
+                    },
+                    status=400,
+                )
+
+        # Save the uploaded PDF temporarily
+        pdf_file_path = default_storage.save(f"temp/{pdf_file.name}", pdf_file)
+        pdf_file_full_path = default_storage.path(pdf_file_path)
+
+        try:
+            extracted_pages = {}
+
+            # Open the PDF
+            with fitz.open(pdf_file_full_path) as pdf_document:
+                # Determine which pages to process
+                if extract_all:
+                    page_numbers = range(pdf_document.page_count)  # All pages
+                else:
+                    page_numbers = pages
+
+                # Validate page numbers
+                if any(
+                    page < 0 or page >= pdf_document.page_count for page in page_numbers
+                ):
+                    return Response(
+                        {"error": "One or more page numbers are out of range."},
+                        status=400,
+                    )
+
+                # Process the specified pages
+                for page_number in page_numbers:
+                    try:
+                        print(f"Processing page: {page_number + 1}")
+
+                        # Render the page as an image
+                        page = pdf_document[page_number]
+                        pix = page.get_pixmap(
+                            dpi=150
+                        )  # Adjust DPI for better OCR results
+                        img = Image.frombytes(
+                            "RGB", [pix.width, pix.height], pix.samples
+                        )
+
+                        # Perform OCR on the rendered image
+                        ocr_text = pytesseract.image_to_string(img)
+
+                        # Clean up extracted text
+                        cleaned_text = clean_extracted_text(ocr_text)
+
+                        # Add to the result dictionary
+                        extracted_pages[str(page_number + 1)] = (
+                            cleaned_text.strip() or "No text detected."
+                        )
+                    except Exception as e:
+                        print(f"Error processing page {page_number + 1}: {e}")
+                        extracted_pages[str(page_number + 1)] = f"Error: {str(e)}"
+
+            return Response({"pages": extracted_pages}, status=200)
+
+        except Exception as e:
+            print(f"Unhandled exception: {e}")
+            return Response({"error": str(e)}, status=500)
+
+        finally:
+            # Cleanup the uploaded file
+            if os.path.exists(pdf_file_full_path):
+                os.remove(pdf_file_full_path)
+
+def clean_extracted_text(text):
+    """
+    Clean up OCR extracted text to improve readability.
+    """
+    # Replace unnecessary newlines and tabs with spaces
+    text = text.replace("\n", " ").replace("\t", " ")
+
+    # Remove excessive spaces
+    text = " ".join(text.split())
+
+    return text
+
+# class UploadPDFView(APIView):
+#     parser_classes = [MultiPartParser, FormParser]
+#
+#     def post(self, request, *args, **kwargs):
+#         file = request.data.get("file")
+#         if not file or file.content_type != "application/pdf":
+#             return Response(
+#                 {"error": "Invalid file format. Only PDF files are allowed."},
+#                 status=400,
+#             )
+#
+#         # Save the file to a temporary location
+#         file_path = os.path.join(settings.MEDIA_ROOT, file.name)
+#         with open(file_path, "wb") as f:
+#             f.write(file.read())
+#
+#         # Return the file path to be used later
+#         return Response({"file_path": file_path}, status=201)
+
+
+class UploadPDFView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, *args, **kwargs):
+        file = request.data.get("file")
+        if not file or file.content_type != "application/pdf":
+            return Response(
+                {"error": "Invalid file format. Only PDF files are allowed."},
+                status=400,
+            )
+
+        # Save the file to a temporary location
+        file_path = default_storage.save(f"temp/{file.name}", file)
+        full_file_path = default_storage.path(file_path)
+
+        try:
+            # Return the file path to be used later
+            return Response({"file_path": full_file_path}, status=201)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+        finally:
+            # Cleanup the uploaded file
+            if os.path.exists(full_file_path):
+                os.remove(full_file_path)

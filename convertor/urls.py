@@ -5,7 +5,7 @@ from .views import (
     ConvertPptToPdf,
     ConvertToPdf,
     ConvertXlsxToPdf,
-    PdfOcrView,
+    PdfOcrView, ExtractPdfContent, UploadPDFView,
 )
 
 urlpatterns = [
@@ -16,4 +16,7 @@ urlpatterns = [
     path("convert/ppt-to-pdf/", ConvertPptToPdf.as_view(), name="convert-ppt-to-pdf"),
     path("convert/html-to-pdf/", ConvertToPdf.as_view(), name="convert-html-to-pdf"),
     path("convert/pdf-ocr/", PdfOcrView.as_view(), name="convert-pdf-ocr"),
+    path("extract-content/", ExtractPdfContent.as_view(), name="extract_content"),
+    path("upload-pdf/", UploadPDFView.as_view(), name="upload_pdf"),
+
 ]
